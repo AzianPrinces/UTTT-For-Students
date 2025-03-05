@@ -1,6 +1,5 @@
 package dk.easv.bll.bot;
 
-import dk.easv.bll.field.IField;
 import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
@@ -9,16 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class DummyBot implements IBot{
-    private static final String BOTNAME="DummyBot";
-    private int botPlayer;
+public class DumpMinimaxBot implements IBot{
+    private static final String BOTNAME="Dump minimax bot";
+    private int botPlayer; // 0 or 1 representing which player the bot is
     private Random random = new Random();
 
 
     @Override
     public IMove doMove(IGameState state) {
 
-        //gets available moves in the List avail
+        // Get all possible legal moves in current game state
         List<IMove> avail = state.getField().getAvailableMoves();
         //IF there are no moves avail return null
         if(avail.isEmpty()) {
@@ -30,15 +29,19 @@ public class DummyBot implements IBot{
 
         List<IMove> bestMoves = new ArrayList<>();
         int bestValue = Integer.MIN_VALUE;
-        int depth = 1;
+        int depth = 1; // Search depth (higher = deeper lookahead, but slower)
         // Determine the current player (as a String marker)
         String currentPlayer = String.valueOf(state.getMoveNumber() % 2);
 
         // Loop through all available moves and use minimax to evaluate each
         for(IMove move : avail) {
-
+            // Simulate making this move in a copy of the game state
             IGameState newState = simulateMove(state, move);
+
+            // Recursively evaluate subsequent moves using minimax with alpha-beta pruning
             int eval = minimax(newState, depth -1, false, move, currentPlayer, Integer.MIN_VALUE, Integer.MAX_VALUE);
+
+            // Track best moves found
             if(eval > bestValue) {
                 bestValue = eval;
                 bestMoves.clear();
@@ -48,7 +51,7 @@ public class DummyBot implements IBot{
             }
 
         }
-        // Choose deterministically: for example, the first move with the best evaluation
+        // Random selection between equally good moves to avoid predictability
         IMove bestMove = bestMoves.get(random.nextInt(bestMoves.size()));
         System.out.println("Chosen move: " + bestMove + " with best score: " + bestValue);
         return bestMove;
@@ -57,18 +60,19 @@ public class DummyBot implements IBot{
 
     /**
      * Simulates a move by cloning the state, applying the move,
-     * and updating the move and round numbers.
+     * and updating the move and round numbers
      */
-    public IGameState simulateMove(IGameState state, IMove move) {
+    // Creates a copy of the game state with a move applied
+    private IGameState simulateMove(IGameState state, IMove move) {
 
-        IGameState newState = new GameState(state);
-
-        int currentPlayer = state.getMoveNumber() % 2;
-
+        IGameState newState = new GameState(state); // Clone original state
         String[][] board = newState.getField().getBoard();
 
+        // Determine current player (0 or 1) based on move number
+        int currentPlayer = state.getMoveNumber() % 2;
         board[move.getX()][move.getY()] = String.valueOf(currentPlayer);
 
+        // Update game state counters
         newState.setMoveNumber(newState.getMoveNumber() + 1);
         if (newState.getMoveNumber() % 2 == 0) {
             newState.setRoundNumber(newState.getRoundNumber() + 1);
@@ -78,7 +82,7 @@ public class DummyBot implements IBot{
         return newState;
     }
 
-
+    // Win condition checker for 3x3 sub-boards
     private boolean isWinningMove(IGameState state, IMove move, String player) {
         String[][] board = state.getField().getBoard();
 
@@ -141,17 +145,17 @@ public class DummyBot implements IBot{
 
     /**
      * Evaluation function that returns:
-     *   +100 if bot wins,
-     *   -100 if opponent wins,
-     *   0 if tie,
+     *   +1 if bot wins,
+     *   +2 if opponent wins,
+     *   -1 if tie,
      *   or a heuristic value for non-terminal states.
      *
      * Here, we count tokens on the main board (9x9) for a finer evaluation.
      */
+        // Heuristic evaluation function (critical for minimax performance)
         private int evaluate(IGameState state, IMove lastMove, String player) {
 
             if(lastMove != null && isWinningMove(state, lastMove, player)) {
-
 
                 Boolean winner = isWinningMove(state, lastMove, player); ///I don't know what it does, need to improve....
                 if(winner == null)
@@ -165,7 +169,7 @@ public class DummyBot implements IBot{
 
             }
 
-            // Use the main board for heuristic evaluation
+            // Position-based heuristic: counts pieces with center bonus
             int botCount = 0, oppCount = 0;
             String[][] board = state.getField().getBoard(); // 9x9 main board
             String botMarker = String.valueOf(botPlayer);
@@ -174,26 +178,18 @@ public class DummyBot implements IBot{
             for (int i = 0; i < board.length; i++) {
                 for (int j = 0; j < board[i].length; j++) {
                     if (board[i][j].equals(botMarker)) {
+
                         botCount++;
-
                         botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
-                       /* if(i == 4 && j == 4){
-                            botCount+= 2;
-                        }*/
+
                     }else if (board[i][j].equals(oppMarker)) {
-                        oppCount++;
 
+                        oppCount++;
                         botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
-                        /*if(i == 4 && j == 4){
-                            botCount+= 2;
-                        }*/
 
                     }
                 }
             }
-            // A simple heuristic: difference between bot's and opponent's tokens
-            //int heuristic = botCount - oppCount;
-            //heuristic += random.nextInt(3);
 
             return botCount - oppCount;
         }
@@ -201,6 +197,7 @@ public class DummyBot implements IBot{
     /**
      * Basic minimax implementation.
      */
+    // Minimax core with alpha-beta pruning
     private int minimax(IGameState state, int depth, boolean isMaximizing, IMove lastMove, String player, int alpha, int beta) {
 
         if(depth == 0 || (lastMove != null && isWinningMove(state, lastMove, player))) {
@@ -219,7 +216,7 @@ public class DummyBot implements IBot{
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
                 if(beta <= alpha) {
-                    break;
+                    break; // Alpha cutoff
                 }
             }
             return maxEval;
@@ -234,7 +231,7 @@ public class DummyBot implements IBot{
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
                 if(beta <= alpha) {
-                    break;
+                    break; // Beta cutoff
                 }
             }
             return minEval;
