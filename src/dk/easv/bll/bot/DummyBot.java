@@ -15,10 +15,6 @@ public class DummyBot implements IBot{
     private Random random = new Random();
 
 
-    /*public DummyBot(int botPlayer) {
-        this.botPlayer = botPlayer;
-    }*/
-
     @Override
     public IMove doMove(IGameState state) {
 
@@ -34,13 +30,15 @@ public class DummyBot implements IBot{
 
         List<IMove> bestMoves = new ArrayList<>();
         int bestValue = Integer.MIN_VALUE;
-        int depth = 3;
+        int depth = 1;
+        // Determine the current player (as a String marker)
+        String currentPlayer = String.valueOf(state.getMoveNumber() % 2);
 
         // Loop through all available moves and use minimax to evaluate each
         for(IMove move : avail) {
 
             IGameState newState = simulateMove(state, move);
-            int eval = minimax(newState, depth -1, false);
+            int eval = minimax(newState, depth -1, false, move, currentPlayer, Integer.MIN_VALUE, Integer.MAX_VALUE);
             if(eval > bestValue) {
                 bestValue = eval;
                 bestMoves.clear();
@@ -50,9 +48,9 @@ public class DummyBot implements IBot{
             }
 
         }
-        // Randomly select among moves with equal best score
-        IMove bestMove = bestMoves.get(0);
-        System.out.println("Chosen move: " + bestMove + "with best score "  + bestValue);
+        // Choose deterministically: for example, the first move with the best evaluation
+        IMove bestMove = bestMoves.get(random.nextInt(bestMoves.size()));
+        System.out.println("Chosen move: " + bestMove + " with best score: " + bestValue);
         return bestMove;
 
     }
@@ -80,107 +78,6 @@ public class DummyBot implements IBot{
         return newState;
     }
 
-    /**
-     * Returns the winning marker ("0" or "1") if there's a winner on the macroboard,
-     * or null if there is no winner.
-     */
-    /*private String getWinner(IGameState state) {
-        String[][] macro = state.getField().getMacroboard();
-
-        //Check rows for a win
-        for (int r = 0; r < 3; r++) {
-            if (!macro[r][0].equals(IField.EMPTY_FIELD) &&
-                    !macro[r][0].equals(IField.AVAILABLE_FIELD) &&
-
-                    macro[r][0].equals(macro[r][1]) && macro[r][1].equals(macro[r][2])) {
-                return macro[r][0];
-            }
-        }
-
-
-        //Check column for a win
-        for (int c = 0; c < 3; c++) {
-            if (!macro[0][c].equals(IField.EMPTY_FIELD) &&
-                    !macro[0][c].equals(IField.AVAILABLE_FIELD) &&
-
-                    macro[0][c].equals(macro[1][c]) && macro[1][c].equals(macro[2][c])) {
-                return macro[0][c];
-            }
-        }
-
-        //Check diag for a win
-        if (!macro[0][0].equals(IField.EMPTY_FIELD) &&
-                !macro[0][0].equals(IField.AVAILABLE_FIELD) &&
-
-                macro[0][0].equals(macro[1][1]) && macro[1][1].equals(macro[2][2])) {
-            return macro[0][0];
-
-        }
-
-        //Check opDiag for a win
-        if (!macro[0][2].equals(IField.EMPTY_FIELD) &&
-                !macro[0][2].equals(IField.AVAILABLE_FIELD) &&
-
-                macro[0][2].equals(macro[1][1]) && macro[1][1].equals(macro[2][0])) {
-            return macro[0][2];
-        }
-
-
-        return null;
-
-    }*/
-
-
-
-    private boolean isGameOver(IGameState state) {
-
-        //get the macroboard 3x3
-        String[][] macro = state.getField().getMacroboard();
-
-        //Check rows for a win
-        for (int r = 0; r < 3; r++) {
-            if (!macro[r][0].equals(IField.EMPTY_FIELD) &&
-                    !macro[r][0].equals(IField.AVAILABLE_FIELD) &&
-
-                    macro[r][0].equals(macro[r][1]) && macro[r][1].equals(macro[r][2])) {
-                return true;
-            }
-        }
-
-
-            //Check column for a win
-            for (int c = 0; c < 3; c++) {
-                if (!macro[0][c].equals(IField.EMPTY_FIELD) &&
-                        !macro[0][c].equals(IField.AVAILABLE_FIELD) &&
-
-                        macro[0][c].equals(macro[1][c]) && macro[1][c].equals(macro[2][c])) {
-                    return true;
-                }
-            }
-
-            //Check diag for a win
-                if (!macro[0][0].equals(IField.EMPTY_FIELD) &&
-                        !macro[0][0].equals(IField.AVAILABLE_FIELD) &&
-
-                        macro[0][0].equals(macro[1][1]) && macro[1][1].equals(macro[2][2])) {
-                    return true;
-
-            }
-
-            //Check opDiag for a win
-                if (!macro[0][2].equals(IField.EMPTY_FIELD) &&
-                        !macro[0][2].equals(IField.AVAILABLE_FIELD) &&
-
-                        macro[0][2].equals(macro[1][1]) && macro[1][1].equals(macro[2][0])) {
-                    return true;
-                }
-
-        // If no available moves remain the game over (tie)
-                if(state.getField().getAvailableMoves().isEmpty()){
-                    return true;
-                }
-                return false;
-            }
 
     private boolean isWinningMove(IGameState state, IMove move, String player) {
         String[][] board = state.getField().getBoard();
@@ -251,16 +148,19 @@ public class DummyBot implements IBot{
      *
      * Here, we count tokens on the main board (9x9) for a finer evaluation.
      */
-        private int evaluate(IGameState state) {
+        private int evaluate(IGameState state, IMove lastMove, String player) {
 
-            if(isGameOver(state)) {
-                Boolean winner = isGameOver(state);
+            if(lastMove != null && isWinningMove(state, lastMove, player)) {
+
+
+                Boolean winner = isWinningMove(state, lastMove, player); ///I don't know what it does, need to improve....
                 if(winner == null)
-                    return 0; //tie
-                else if(winner.equals(String.valueOf(botPlayer))) {
-                    return 100; //bot won
+                    return -1; //tie
+
+               if(player.equals(String.valueOf(botPlayer))) {
+                    return 1; //bot won
                 } else {
-                    return -100; //opponent won
+                    return 2; //opponent won
                 }
 
             }
@@ -269,7 +169,7 @@ public class DummyBot implements IBot{
             int botCount = 0, oppCount = 0;
             String[][] board = state.getField().getBoard(); // 9x9 main board
             String botMarker = String.valueOf(botPlayer);
-            String oppMarker = String.valueOf((botPlayer == 0) ? 1 : 0);
+            String oppMarker = String.valueOf(1 - botPlayer);
 
             for (int i = 0; i < board.length; i++) {
                 for (int j = 0; j < board[i].length; j++) {
@@ -277,48 +177,65 @@ public class DummyBot implements IBot{
                         botCount++;
 
                         botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
+                       /* if(i == 4 && j == 4){
+                            botCount+= 2;
+                        }*/
                     }else if (board[i][j].equals(oppMarker)) {
                         oppCount++;
 
-                        // Bonus for center positions
-                        if(i == 4 && j == 4){
+                        botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
+                        /*if(i == 4 && j == 4){
                             botCount+= 2;
-                        }
+                        }*/
 
                     }
                 }
             }
             // A simple heuristic: difference between bot's and opponent's tokens
-            int heuristic = botCount - oppCount;
-            heuristic += random.nextInt(3);
+            //int heuristic = botCount - oppCount;
+            //heuristic += random.nextInt(3);
 
-            return heuristic;
+            return botCount - oppCount;
         }
 
     /**
      * Basic minimax implementation.
      */
-    private int minimax(IGameState state, int depth, boolean isMaximizing) {
+    private int minimax(IGameState state, int depth, boolean isMaximizing, IMove lastMove, String player, int alpha, int beta) {
 
-        if(depth == 0 || isGameOver(state)) {
-            return evaluate(state);
+        if(depth == 0 || (lastMove != null && isWinningMove(state, lastMove, player))) {
+            return evaluate(state, lastMove, player);
         }
 
-        // For simplicity, we use simulateMove without passing extra player info
         if(isMaximizing) {
             int maxEval = Integer.MIN_VALUE;
+
+            // When maximizing, the current move is by our bot
             for (IMove move : state.getField().getAvailableMoves()) {
                 IGameState newState = simulateMove(state, move);
-                int eval = minimax(newState, depth - 1, false);
+
+                // The new last move is "move" and the player is our bot
+                int eval = minimax(newState, depth - 1, false, move, String.valueOf(botPlayer), alpha, beta);
                 maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if(beta <= alpha) {
+                    break;
+                }
             }
             return maxEval;
         }else{
             int minEval = Integer.MAX_VALUE;
+
+            // When minimizing, the move is by the opponent
+            String opponentMarker = String.valueOf((botPlayer == 0) ? 1 : 0);
             for (IMove move : state.getField().getAvailableMoves()) {
                 IGameState newState = simulateMove(state, move);
-                int eval = minimax(newState, depth - 1, true);
+                int eval = minimax(newState, depth - 1, true, move, opponentMarker, alpha, beta);
                 minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if(beta <= alpha) {
+                    break;
+                }
             }
             return minEval;
         }
@@ -332,5 +249,108 @@ public class DummyBot implements IBot{
     public String getBotName() {
         return BOTNAME; //To change body of generated methods, choose Tools | Templates.
     }
+
+    /**
+     * Returns the winning marker ("0" or "1") if there's a winner on the macroboard,
+     * or null if there is no winner.
+     */
+    /*private String getWinner(IGameState state) {
+        String[][] macro = state.getField().getMacroboard();
+
+        //Check rows for a win
+        for (int r = 0; r < 3; r++) {
+            if (!macro[r][0].equals(IField.EMPTY_FIELD) &&
+                    !macro[r][0].equals(IField.AVAILABLE_FIELD) &&
+
+                    macro[r][0].equals(macro[r][1]) && macro[r][1].equals(macro[r][2])) {
+                return macro[r][0];
+            }
+        }
+
+
+        //Check column for a win
+        for (int c = 0; c < 3; c++) {
+            if (!macro[0][c].equals(IField.EMPTY_FIELD) &&
+                    !macro[0][c].equals(IField.AVAILABLE_FIELD) &&
+
+                    macro[0][c].equals(macro[1][c]) && macro[1][c].equals(macro[2][c])) {
+                return macro[0][c];
+            }
+        }
+
+        //Check diag for a win
+        if (!macro[0][0].equals(IField.EMPTY_FIELD) &&
+                !macro[0][0].equals(IField.AVAILABLE_FIELD) &&
+
+                macro[0][0].equals(macro[1][1]) && macro[1][1].equals(macro[2][2])) {
+            return macro[0][0];
+
+        }
+
+        //Check opDiag for a win
+        if (!macro[0][2].equals(IField.EMPTY_FIELD) &&
+                !macro[0][2].equals(IField.AVAILABLE_FIELD) &&
+
+                macro[0][2].equals(macro[1][1]) && macro[1][1].equals(macro[2][0])) {
+            return macro[0][2];
+        }
+
+
+        return null;
+
+    }*/
+
+
+
+    /*private boolean isGameOver(IGameState state) {
+
+        //get the macroboard 3x3
+        String[][] macro = state.getField().getMacroboard();
+
+        //Check rows for a win
+        for (int r = 0; r < 3; r++) {
+            if (!macro[r][0].equals(IField.EMPTY_FIELD) &&
+                    !macro[r][0].equals(IField.AVAILABLE_FIELD) &&
+
+                    macro[r][0].equals(macro[r][1]) && macro[r][1].equals(macro[r][2])) {
+                return true;
+            }
+        }
+
+
+            //Check column for a win
+            for (int c = 0; c < 3; c++) {
+                if (!macro[0][c].equals(IField.EMPTY_FIELD) &&
+                        !macro[0][c].equals(IField.AVAILABLE_FIELD) &&
+
+                        macro[0][c].equals(macro[1][c]) && macro[1][c].equals(macro[2][c])) {
+                    return true;
+                }
+            }
+
+            //Check diag for a win
+                if (!macro[0][0].equals(IField.EMPTY_FIELD) &&
+                        !macro[0][0].equals(IField.AVAILABLE_FIELD) &&
+
+                        macro[0][0].equals(macro[1][1]) && macro[1][1].equals(macro[2][2])) {
+                    return true;
+
+            }
+
+            //Check opDiag for a win
+                if (!macro[0][2].equals(IField.EMPTY_FIELD) &&
+                        !macro[0][2].equals(IField.AVAILABLE_FIELD) &&
+
+                        macro[0][2].equals(macro[1][1]) && macro[1][1].equals(macro[2][0])) {
+                    return true;
+                }
+
+        // If no available moves remain the game over (tie)
+                if(state.getField().getAvailableMoves().isEmpty()){
+                    return true;
+                }
+                return false;
+            }*/
+
 
 }
