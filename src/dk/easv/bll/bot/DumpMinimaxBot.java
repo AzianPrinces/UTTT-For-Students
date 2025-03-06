@@ -19,6 +19,7 @@ public class DumpMinimaxBot implements IBot{
 
         // Get all possible legal moves in current game state
         List<IMove> avail = state.getField().getAvailableMoves();
+
         //IF there are no moves avail return null
         if(avail.isEmpty()) {
             return null;
@@ -29,7 +30,9 @@ public class DumpMinimaxBot implements IBot{
 
         List<IMove> bestMoves = new ArrayList<>();
         int bestValue = Integer.MIN_VALUE;
-        int depth = 1; // Search depth (higher = deeper lookahead, but slower)
+
+        int depth = 2; // Search depth (higher = deeper lookahead, but slower)
+
         // Determine the current player (as a String marker)
         String currentPlayer = String.valueOf(state.getMoveNumber() % 2);
 
@@ -38,7 +41,7 @@ public class DumpMinimaxBot implements IBot{
             // Simulate making this move in a copy of the game state
             IGameState newState = simulateMove(state, move);
 
-            // Recursively evaluate subsequent moves using minimax with alpha-beta pruning
+            // Recursively evaluate moves using minimax with alpha-beta pruning
             int eval = minimax(newState, depth -1, false, move, currentPlayer, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
             // Track best moves found
@@ -145,9 +148,9 @@ public class DumpMinimaxBot implements IBot{
 
     /**
      * Evaluation function that returns:
-     *   +1 if bot wins,
-     *   +2 if opponent wins,
-     *   -1 if tie,
+     *   1 if bot wins,
+     *   -1 if opponent wins,
+     *
      *   or a heuristic value for non-terminal states.
      *
      * Here, we count tokens on the main board (9x9) for a finer evaluation.
@@ -157,14 +160,14 @@ public class DumpMinimaxBot implements IBot{
 
             if(lastMove != null && isWinningMove(state, lastMove, player)) {
 
-                Boolean winner = isWinningMove(state, lastMove, player); ///I don't know what it does, need to improve....
+                /*Boolean winner = isWinningMove(state, lastMove, player); ///doesnt work, need to improve....
                 if(winner == null)
-                    return -1; //tie
+                    return 0; //tie*/
 
                if(player.equals(String.valueOf(botPlayer))) {
                     return 1; //bot won
                 } else {
-                    return 2; //opponent won
+                    return -1; //opponent won
                 }
 
             }
@@ -175,17 +178,17 @@ public class DumpMinimaxBot implements IBot{
             String botMarker = String.valueOf(botPlayer);
             String oppMarker = String.valueOf(1 - botPlayer);
 
-            for (int i = 0; i < board.length; i++) {
-                for (int j = 0; j < board[i].length; j++) {
-                    if (board[i][j].equals(botMarker)) {
+            for (int x = 0; x < board.length; x++) {
+                for (int y = 0; y < board[x].length; y++) {
+                    if (board[x][y].equals(botMarker)) {
 
                         botCount++;
-                        botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
+                        botMarker += (4 - Math.abs(x - 4)) + (4 - Math.abs(x - 4));
 
-                    }else if (board[i][j].equals(oppMarker)) {
+                    }else if (board[x][y].equals(oppMarker)) {
 
                         oppCount++;
-                        botMarker += (4 - Math.abs(i - 4)) + (4 - Math.abs(j - 4));
+                        botMarker += (4 - Math.abs(x - 4)) + (4 - Math.abs(y - 4));
 
                     }
                 }
